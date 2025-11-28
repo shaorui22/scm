@@ -1,0 +1,3 @@
+com.kava.scm.common.feign.ScmFeignAutoConfiguration
+com.kava.scm.common.feign.sentinel.SentinelAutoConfiguration
+com.kava.scm.common.feign.sentinel.handle.GlobalBizExceptionHandler

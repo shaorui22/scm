@@ -1,0 +1,106 @@
+version: '3'
+services:
+  scm-mysql:
+    build:
+      context: ./db
+    environment:
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_ROOT_PASSWORD: root
+    restart: always
+    container_name: scm-mysql
+    image: scm-mysql
+    ports:
+      - 33306:3306
+    networks:
+      - spring_cloud_default
+
+  scm-redis:
+    image: registry.cn-hangzhou.aliyuncs.com/dockerhub_mirror/redis
+    ports:
+      - 36379:6379
+    restart: always
+    container_name: scm-redis
+    hostname: scm-redis
+    networks:
+      - spring_cloud_default
+
+  scm-register:
+    build:
+      context: ./scm-register
+    restart: always
+    ports:
+      - 8848:8848
+      - 9848:9848
+    container_name: scm-register
+    hostname: scm-register
+    image: scm-register
+    networks:
+      - spring_cloud_default
+
+  scm-gateway:
+    build:
+      context: ./scm-gateway
+    restart: always
+    ports:
+      - 9999:9999
+    container_name: scm-gateway
+    hostname: scm-gateway
+    image: scm-gateway
+    networks:
+      - spring_cloud_default
+
+  scm-auth:
+    build:
+      context: ./scm-auth
+    restart: always
+    container_name: scm-auth
+    hostname: scm-auth
+    image: scm-auth
+    networks:
+      - spring_cloud_default
+
+  scm-upms:
+    build:
+      context: ./scm-upms/scm-upms-biz
+    restart: always
+    container_name: scm-upms
+    hostname: scm-upms
+    image: scm-upms
+    networks:
+      - spring_cloud_default
+
+  scm-monitor:
+    build:
+      context: ./scm-visual/scm-monitor
+    restart: always
+    ports:
+      - 5001:5001
+    container_name: scm-monitor
+    hostname: scm-monitor
+    image: scm-monitor
+    networks:
+      - spring_cloud_default
+  
+  scm-codegen:
+    build:
+      context: ./scm-visual/scm-codegen
+    restart: always
+    container_name: scm-codegen
+    hostname: scm-codegen
+    image: scm-codegen
+    networks:
+      - spring_cloud_default
+
+  scm-quartz:
+    build:
+      context: ./scm-visual/scm-quartz
+    restart: always
+    image: scm-quartz
+    container_name: scm-quartz
+    networks:
+      - spring_cloud_default
+
+networks:
+  spring_cloud_default:
+    name:  spring_cloud_default
+    driver: bridge

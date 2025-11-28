@@ -1,0 +1,26 @@
+server:
+  port: 4000
+
+spring:
+  application:
+    name: @artifactId@
+  cloud:
+    nacos:
+      username: @nacos.username@
+      password: @nacos.password@
+      discovery:
+        server-addr: ${NACOS_HOST:scm-register}:${NACOS_PORT:8848}
+      config:
+        server-addr: ${spring.cloud.nacos.discovery.server-addr}
+  config:
+    import:
+      - nacos:application-@profiles.active@.yml
+      - nacos:${spring.application.name}-@profiles.active@.yml
+
+kava:
+  scm:
+    mail:
+      template: 您好！点击以下链接来登录科望客户中心：<hr><a href="http://192.168.8.16:5666/auth/login-auth?email=%s&code=%s">登录链接</a>
+      login:
+        title: 登录链接
+

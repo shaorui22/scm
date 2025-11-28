@@ -1,0 +1,6 @@
+com.kava.scm.admin.api.feign.RemoteClientDetailsService
+com.kava.scm.admin.api.feign.RemoteDictService
+com.kava.scm.admin.api.feign.RemoteLogService
+com.kava.scm.admin.api.feign.RemoteParamService
+com.kava.scm.admin.api.feign.RemoteTokenService
+com.kava.scm.admin.api.feign.RemoteUserService

@@ -1,0 +1,6 @@
+com.kava.scm.common.core.config.TaskExecutorConfiguration
+com.kava.scm.common.core.config.JacksonConfiguration
+com.kava.scm.common.core.config.RedisTemplateConfiguration
+com.kava.scm.common.core.config.RestTemplateConfiguration
+com.kava.scm.common.core.util.SpringContextHolder
+com.kava.scm.common.core.config.WebMvcConfiguration

@@ -1,0 +1,8 @@
+com.kava.scm.common.security.service.ScmUserDetailsServiceImpl
+com.kava.scm.common.security.service.ScmAppUserDetailsServiceImpl
+com.kava.scm.common.security.service.ScmEmailUserDetailsServiceImpl
+com.kava.scm.common.security.service.ScmRedisOAuth2AuthorizationService
+com.kava.scm.common.security.service.ScmRedisOAuth2AuthorizationConsentService
+com.kava.scm.common.security.component.ScmSecurityInnerAspect
+com.kava.scm.common.security.component.ScmSecurityMessageSourceConfiguration
+com.kava.scm.common.security.service.ScmRemoteRegisteredClientRepository
