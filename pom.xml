@@ -112,7 +112,6 @@
         <module>scm-upms</module>
         <module>scm-common</module>
         <module>scm-visual</module>
-		<module>scm-oms</module>
     </modules>
 
     <dependencyManagement>

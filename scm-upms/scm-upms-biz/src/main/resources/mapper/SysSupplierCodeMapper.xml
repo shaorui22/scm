@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~
+  ~      Copyright (c) 2018-2025, lengleng All rights reserved.
+  ~
+  ~  Redistribution and use in source and binary forms, with or without
+  ~  modification, are permitted provided that the following conditions are met:
+  ~
+  ~ Redistributions of source code must retain the above copyright notice,
+  ~  this list of conditions and the following disclaimer.
+  ~  Redistributions in binary form must reproduce the above copyright
+  ~  notice, this list of conditions and the following disclaimer in the
+  ~  documentation and/or other materials provided with the distribution.
+  ~  Neither the name of the scm4cloud.com developer nor the names of its
+  ~  contributors may be used to endorse or promote products derived from
+  ~  this software without specific prior written permission.
+  ~  Author: lengleng (wangiegie@gmail.com)
+  ~
+  -->
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kava.scm.admin.mapper.SysSupplierCodeMapper">
+
+	<select id="getSupplierCodeList" resultType="com.kava.scm.admin.api.dto.SupplierData">
+		SELECT e.id AS supplierId, e.name AS NAME, e.entity_id AS CODE,e.abbreviation AS abbrName, e.main_business  AS mainBusiness
+		FROM db_erp_sync.erp_vendor e
+		WHERE e.name like CONCAT( '%', #{condition}, '%')
+		OR e.abbreviation  like CONCAT( '%', #{condition}, '%')
+		OR e.entity_id  like CONCAT( '%', #{condition}, '%')
+	</select>
+</mapper>

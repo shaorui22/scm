@@ -19,6 +19,7 @@
 
 package com.kava.scm.admin;
 
+import com.kava.scm.common.datasource.annotation.EnableDynamicDataSource;
 import com.kava.scm.common.feign.annotation.EnableScmFeignClients;
 import com.kava.scm.common.security.annotation.EnableScmResourceServer;
 import com.kava.scm.common.swagger.annotation.EnableScmDoc;
@@ -37,6 +38,7 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 @EnableScmResourceServer
 @EnableDiscoveryClient
 @SpringBootApplication
+@EnableDynamicDataSource
 public class ScmAdminApplication {
 
 	public static void main(String[] args) {
