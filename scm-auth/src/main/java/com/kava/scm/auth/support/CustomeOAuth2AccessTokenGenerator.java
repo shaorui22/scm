@@ -67,10 +67,15 @@ public class CustomeOAuth2AccessTokenGenerator implements OAuth2TokenGenerator<O
             OAuth2TokenClaimsContext.Builder accessTokenContextBuilder = OAuth2TokenClaimsContext.with(claimsBuilder)
                     .registeredClient(context.getRegisteredClient())
                     .principal(context.getPrincipal())
-                    .authorizationServerContext(context.getAuthorizationServerContext())
                     .authorizedScopes(context.getAuthorizedScopes())
                     .tokenType(context.getTokenType())
                     .authorizationGrantType(context.getAuthorizationGrantType());
+            
+            // 添加null检查，避免传入null值
+            if (context.getAuthorizationServerContext() != null) {
+                accessTokenContextBuilder.authorizationServerContext(context.getAuthorizationServerContext());
+            }
+            
             if (context.getAuthorization() != null) {
                 accessTokenContextBuilder.authorization(context.getAuthorization());
             }

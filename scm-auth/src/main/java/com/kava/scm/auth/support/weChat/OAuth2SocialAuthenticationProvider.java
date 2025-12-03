@@ -16,6 +16,7 @@ import org.springframework.security.oauth2.server.authorization.authentication.O
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2ClientAuthenticationToken;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 
+import org.springframework.security.oauth2.server.authorization.context.AuthorizationServerContextHolder;
 import org.springframework.security.oauth2.server.authorization.token.DefaultOAuth2TokenContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
@@ -89,14 +90,15 @@ public class OAuth2SocialAuthenticationProvider implements AuthenticationProvide
 				.authenticate(usernamePasswordAuthenticationToken);
 
 		// @formatter:off
-		DefaultOAuth2TokenContext.Builder tokenContextBuilder = DefaultOAuth2TokenContext.builder()
-				.registeredClient(registeredClient)
-				.principal(usernamePasswordAuthentication)
-				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE) // 或你的自定义 grant
-				.authorizationGrant(weChatAuthToken)
-				.authorizedScopes(registeredClient.getScopes()); // 设置作用域
+			DefaultOAuth2TokenContext.Builder tokenContextBuilder = DefaultOAuth2TokenContext.builder()
+					.registeredClient(registeredClient)
+					.principal(usernamePasswordAuthentication)
+					.authorizationServerContext(AuthorizationServerContextHolder.getContext())
+					.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE) // 或你的自定义 grant
+					.authorizationGrant(weChatAuthToken)
+					.authorizedScopes(registeredClient.getScopes()); // 设置作用域
 
-		// @formatter:on
+			// @formatter:on
 		OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization
 				.withRegisteredClient(registeredClient)
 				.principalName(usernamePasswordAuthentication.getName())
