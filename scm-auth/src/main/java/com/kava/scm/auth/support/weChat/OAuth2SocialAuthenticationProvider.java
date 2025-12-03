@@ -1,5 +1,6 @@
 package com.kava.scm.auth.support.weChat;
 
+import com.kava.scm.common.core.constant.SecurityConstants;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -14,6 +15,7 @@ import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AccessTokenAuthenticationToken;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2ClientAuthenticationToken;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
+
 import org.springframework.security.oauth2.server.authorization.token.DefaultOAuth2TokenContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
@@ -28,10 +30,8 @@ import static org.springframework.security.oauth2.core.endpoint.OAuth2ParameterN
 public class OAuth2SocialAuthenticationProvider implements AuthenticationProvider {
 
 	private static final Logger logger = LogManager.getLogger(OAuth2SocialAuthenticationProvider.class);
-
-	public static final AuthorizationGrantType WECHAT_MP = new AuthorizationGrantType("wechat_mp");
-
 	private final OAuth2SocialAuthenticationHelper authHelper;
+
 	private final AuthenticationManager authenticationManager;
 	private final OAuth2AuthorizationService authorizationService;
 	private final OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator;
@@ -59,7 +59,8 @@ public class OAuth2SocialAuthenticationProvider implements AuthenticationProvide
 
 	@Override
 	public Authentication authenticate(Authentication authentication) throws AuthenticationException {
-		OAuth2SocialAuthenticationToken weChatAuthToken = (OAuth2SocialAuthenticationToken) authentication;
+		OAuth2SocialAuthenticationToken weChatAuthToken =
+				(OAuth2SocialAuthenticationToken) authentication;
 
 		OAuth2ClientAuthenticationToken clientPrincipal =
 				getAuthenticatedClientElseThrowInvalidClient(weChatAuthToken);
@@ -72,84 +73,80 @@ public class OAuth2SocialAuthenticationProvider implements AuthenticationProvide
 				weChatAuthToken.getJsCode()
 		);
 		logger.info("wxResp: {}", wxResp);
-
 		if (wxResp == null || wxResp.get("openid") == null) {
 			throw new OAuth2AuthenticationException("WeChat login failed: " + wxResp);
 		}
 		String openid = wxResp.get("openid").toString();
+		// 根据openid查询用户名称
+		// 根据用户名查询用户信息，构建authorization
 
-		// 根据 openid 查询用户名称
 		String userName = authHelper.findUserNameByWxOpenid(openid);
 
-		// 认证用户
-		UsernamePasswordAuthenticationToken userAuthToken =
+		UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken =
 				new UsernamePasswordAuthenticationToken(userName, null);
-		Authentication authenticatedUser = authenticationManager.authenticate(userAuthToken);
 
-		// 构建 OAuth2Authorization
-		OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization
-				.withRegisteredClient(registeredClient)
-				.principalName(authenticatedUser.getName())
-				.authorizationGrantType(WECHAT_MP);
+		Authentication usernamePasswordAuthentication = authenticationManager
+				.authenticate(usernamePasswordAuthenticationToken);
 
-		// 构建 token context
+		// @formatter:off
 		DefaultOAuth2TokenContext.Builder tokenContextBuilder = DefaultOAuth2TokenContext.builder()
 				.registeredClient(registeredClient)
-				.principal(authenticatedUser)
-				.authorizationGrantType(WECHAT_MP)
+				.principal(usernamePasswordAuthentication)
+				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE) // 或你的自定义 grant
 				.authorizationGrant(weChatAuthToken)
-				.authorizedScopes(registeredClient.getScopes());
+				.authorizedScopes(registeredClient.getScopes()); // 设置作用域
 
-		// Access token
-		OAuth2TokenContext accessTokenContext = tokenContextBuilder.tokenType(OAuth2TokenType.ACCESS_TOKEN).build();
-		OAuth2Token generatedAccessToken = tokenGenerator.generate(accessTokenContext);
+		// @formatter:on
+		OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization
+				.withRegisteredClient(registeredClient)
+				.principalName(usernamePasswordAuthentication.getName())
+				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE); // TODO social
+
+		// ----- Access token -----
+		OAuth2TokenContext tokenContext = tokenContextBuilder.tokenType(OAuth2TokenType.ACCESS_TOKEN).build();
+		logger.info("tokenContext: {}", tokenContext);
+		OAuth2Token generatedAccessToken = this.tokenGenerator.generate(tokenContext);
 		if (generatedAccessToken == null) {
-			throw new OAuth2AuthenticationException(new OAuth2Error(
-					OAuth2ErrorCodes.SERVER_ERROR,
-					"Failed to generate access token",
-					ERROR_URI
-			));
+			OAuth2Error error = new OAuth2Error(OAuth2ErrorCodes.SERVER_ERROR,
+					"The token generator failed to generate the access token.", ERROR_URI);
+			throw new OAuth2AuthenticationException(error);
+		}
+		OAuth2AccessToken accessToken = new OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER,
+				generatedAccessToken.getTokenValue(), generatedAccessToken.getIssuedAt(),
+				generatedAccessToken.getExpiresAt(), tokenContext.getAuthorizedScopes());
+		if (generatedAccessToken instanceof ClaimAccessor) {
+			authorizationBuilder
+					.id(accessToken.getTokenValue())
+					.token(accessToken, (metadata) ->
+							metadata.put(OAuth2Authorization.Token.CLAIMS_METADATA_NAME, ((ClaimAccessor) generatedAccessToken).getClaims()))
+					.attribute(Principal.class.getName(), usernamePasswordAuthentication);
+		} else {
+			authorizationBuilder.id(accessToken.getTokenValue()).accessToken(accessToken);
 		}
 
-		OAuth2AccessToken accessToken = new OAuth2AccessToken(
-				OAuth2AccessToken.TokenType.BEARER,
-				generatedAccessToken.getTokenValue(),
-				generatedAccessToken.getIssuedAt(),
-				generatedAccessToken.getExpiresAt(),
-				accessTokenContext.getAuthorizedScopes()
-		);
-
-		// 将 access token 加入授权
-		authorizationBuilder.id(accessToken.getTokenValue()).accessToken(accessToken);
-
-		// Refresh token
+		// ----- Refresh token -----
 		OAuth2RefreshToken refreshToken = null;
-		if (registeredClient.getAuthorizationGrantTypes().contains(AuthorizationGrantType.REFRESH_TOKEN)
-				&& !clientPrincipal.getClientAuthenticationMethod().equals(ClientAuthenticationMethod.NONE)) {
+		if (registeredClient.getAuthorizationGrantTypes().contains(AuthorizationGrantType.REFRESH_TOKEN) &&
+				// Do not issue refresh token to public client
+				!clientPrincipal.getClientAuthenticationMethod().equals(ClientAuthenticationMethod.NONE)) {
 
-			OAuth2TokenContext refreshTokenContext = tokenContextBuilder.tokenType(OAuth2TokenType.REFRESH_TOKEN).build();
-			OAuth2Token generatedRefreshToken = tokenGenerator.generate(refreshTokenContext);
+			tokenContext = tokenContextBuilder.tokenType(OAuth2TokenType.REFRESH_TOKEN).build();
+			OAuth2Token generatedRefreshToken = this.tokenGenerator.generate(tokenContext);
 			if (!(generatedRefreshToken instanceof OAuth2RefreshToken)) {
-				throw new OAuth2AuthenticationException(new OAuth2Error(
-						OAuth2ErrorCodes.SERVER_ERROR,
-						"Failed to generate refresh token",
-						ERROR_URI
-				));
+				OAuth2Error error = new OAuth2Error(OAuth2ErrorCodes.SERVER_ERROR,
+						"The token generator failed to generate the refresh token.", ERROR_URI);
+				throw new OAuth2AuthenticationException(error);
 			}
 			refreshToken = (OAuth2RefreshToken) generatedRefreshToken;
 			authorizationBuilder.refreshToken(refreshToken);
 		}
 
 		OAuth2Authorization authorization = authorizationBuilder.build();
-		authorizationService.save(authorization);
+		this.authorizationService.save(authorization);
 
 		return new OAuth2AccessTokenAuthenticationToken(
-				registeredClient,
-				clientPrincipal,
-				accessToken,
-				refreshToken,
-				Objects.requireNonNull(authorization.getAccessToken().getClaims())
-		);
+				registeredClient, clientPrincipal, accessToken, refreshToken,
+				Objects.requireNonNull(authorization.getAccessToken().getClaims()));
 	}
 
 	@Override
@@ -157,10 +154,13 @@ public class OAuth2SocialAuthenticationProvider implements AuthenticationProvide
 		return OAuth2SocialAuthenticationToken.class.isAssignableFrom(authentication);
 	}
 
-	private static OAuth2ClientAuthenticationToken getAuthenticatedClientElseThrowInvalidClient(Authentication authentication) {
-		Authentication principal = (Authentication) authentication.getPrincipal();
-		if (principal instanceof OAuth2ClientAuthenticationToken clientAuth && clientAuth.isAuthenticated()) {
-			return clientAuth;
+	static OAuth2ClientAuthenticationToken getAuthenticatedClientElseThrowInvalidClient(Authentication authentication) {
+		OAuth2ClientAuthenticationToken clientPrincipal = null;
+		if (OAuth2ClientAuthenticationToken.class.isAssignableFrom(authentication.getPrincipal().getClass())) {
+			clientPrincipal = (OAuth2ClientAuthenticationToken) authentication.getPrincipal();
+		}
+		if (clientPrincipal != null && clientPrincipal.isAuthenticated()) {
+			return clientPrincipal;
 		}
 		throw new OAuth2AuthenticationException(OAuth2ErrorCodes.INVALID_CLIENT);
 	}
