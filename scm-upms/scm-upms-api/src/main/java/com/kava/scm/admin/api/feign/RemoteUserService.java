@@ -21,12 +21,16 @@ package com.kava.scm.admin.api.feign;
 
 import com.kava.scm.admin.api.dto.UserDTO;
 import com.kava.scm.admin.api.dto.UserInfo;
+import com.kava.scm.common.core.constant.SecurityConstants;
 import com.kava.scm.common.core.constant.ServiceNameConstants;
 import com.kava.scm.common.core.util.R;
 import com.kava.scm.common.feign.annotation.NoToken;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.cloud.openfeign.SpringQueryMap;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 
 /**
  * @author lengleng
@@ -43,5 +47,10 @@ public interface RemoteUserService {
 	@NoToken
 	@GetMapping("/user/info/query")
 	R<UserInfo> info(@SpringQueryMap UserDTO user);
+
+
+
+	@GetMapping("/user/getUserNameByWxOpenid/{wxOpenid}")
+	R<String> getUserNameByWxOpenid(@PathVariable("wxOpenid") String uid, @RequestHeader(SecurityConstants.FROM) String from);
 
 }

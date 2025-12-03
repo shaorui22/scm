@@ -28,8 +28,13 @@ import com.kava.scm.auth.support.password.OAuth2ResourceOwnerPasswordAuthenticat
 import com.kava.scm.auth.support.password.OAuth2ResourceOwnerPasswordAuthenticationProvider;
 import com.kava.scm.auth.support.sms.OAuth2ResourceOwnerSmsAuthenticationConverter;
 import com.kava.scm.auth.support.sms.OAuth2ResourceOwnerSmsAuthenticationProvider;
+import com.kava.scm.auth.support.weChat.OAuth2SocialAuthenticationConverter;
+import com.kava.scm.auth.support.weChat.OAuth2SocialAuthenticationHelper;
+import com.kava.scm.auth.support.weChat.OAuth2SocialAuthenticationProvider;
+import com.kava.scm.auth.support.weChat.WeChatProperties;
 import com.kava.scm.common.core.constant.SecurityConstants;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -69,13 +74,16 @@ public class AuthorizationServerConfiguration {
 
 	private final ValidateCodeFilter validateCodeFilter;
 
+	private final WeChatProperties weChatProperties;
+
+
+
 	@Bean
 	@Order(Ordered.HIGHEST_PRECEDENCE)
 	@ConditionalOnProperty(value = "security.micro", matchIfMissing = true)
 	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
 		OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = new OAuth2AuthorizationServerConfigurer();
 
-		System.out.println("authorizationServerSecurityFilterChain .........");
 		// 增加验证码过滤器
 		http.addFilterBefore(validateCodeFilter, UsernamePasswordAuthenticationFilter.class);
 		// 增加密码解密过滤器
@@ -93,7 +101,7 @@ public class AuthorizationServerConfiguration {
 		AntPathRequestMatcher[] requestMatchers = new AntPathRequestMatcher[] {
 				AntPathRequestMatcher.antMatcher("/token/**"), AntPathRequestMatcher.antMatcher("/actuator/**"),
 				AntPathRequestMatcher.antMatcher("/code/image"), AntPathRequestMatcher.antMatcher("/css/**"),
-				AntPathRequestMatcher.antMatcher("/oauth2/token"),
+				AntPathRequestMatcher.antMatcher("/oauth2/token"),AntPathRequestMatcher.antMatcher("/weChat/login"),
 				AntPathRequestMatcher.antMatcher("/error") };
 
 		http.authorizeHttpRequests(authorizeRequests -> {
@@ -139,7 +147,8 @@ public class AuthorizationServerConfiguration {
 				new OAuth2RefreshTokenAuthenticationConverter(),
 				new OAuth2ClientCredentialsAuthenticationConverter(),
 				new OAuth2AuthorizationCodeAuthenticationConverter(),
-				new OAuth2AuthorizationCodeRequestAuthenticationConverter()));
+				new OAuth2AuthorizationCodeRequestAuthenticationConverter(),
+		        new OAuth2SocialAuthenticationConverter()));
 	}
 
 	/**
@@ -159,6 +168,20 @@ public class AuthorizationServerConfiguration {
 		OAuth2ResourceOwnerSmsAuthenticationProvider resourceOwnerSmsAuthenticationProvider = new OAuth2ResourceOwnerSmsAuthenticationProvider(
 				authenticationManager, authorizationService, oAuth2TokenGenerator());
 
+//		OAuth2SocialAuthenticationProvider socialAuthenticationProvider = new OAuth2SocialAuthenticationProvider(
+//				authenticationManager, authorizationService, authHelper(), oAuth2TokenGenerator()
+//		);
+
+		OAuth2SocialAuthenticationProvider socialAuthenticationProvider =
+				new OAuth2SocialAuthenticationProvider(
+						authHelper(),
+						authenticationManager,
+						authorizationService,
+						oAuth2TokenGenerator(),
+						weChatProperties
+				);
+
+
 
 		// 处理 UsernamePasswordAuthenticationToken
 		http.authenticationProvider(new ScmDaoAuthenticationProvider());
@@ -166,6 +189,13 @@ public class AuthorizationServerConfiguration {
 		http.authenticationProvider(resourceOwnerPasswordAuthenticationProvider);
 		// 处理 OAuth2ResourceOwnerSmsAuthenticationToken
 		http.authenticationProvider(resourceOwnerSmsAuthenticationProvider);
+
+		http.authenticationProvider(socialAuthenticationProvider);
+	}
+
+	@Bean
+	OAuth2SocialAuthenticationHelper authHelper() {
+		return new OAuth2SocialAuthenticationHelper();
 	}
 
 }

@@ -106,8 +106,10 @@ public class ValidateCodeFilter extends OncePerRequestFilter {
 			if (StrUtil.isNotBlank(randomStr)) {
 				key = CacheConstants.DEFAULT_CODE_KEY + randomStr;
 			}
+		} else if (SecurityConstants.WECHAT_MP.equals(grantType)) {
+			// 微信小程序不校验验证码
+			return;
 		}
-		System.out.println("key is: " + key);
 
 		RedisTemplate<String, String> redisTemplate = SpringContextHolder.getBean(RedisTemplate.class);
 		if (Boolean.FALSE.equals(redisTemplate.hasKey(key))) {

@@ -131,4 +131,5 @@ public interface SysUserService extends IService<SysUser> {
 	 */
 	R checkPassword(String password);
 
+	R<String> getUserNameByWxOpenid(String wxOpenid);
 }

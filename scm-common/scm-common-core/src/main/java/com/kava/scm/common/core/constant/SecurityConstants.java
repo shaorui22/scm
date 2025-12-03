@@ -146,4 +146,9 @@ public interface SecurityConstants {
 	 * randomStr 随机数
 	 */
 	String RANDOMSTR = "randomStr";
+
+	/**
+	 * randomStr 随机数
+	 */
+	String WECHAT_MP = "wechatMp";
 }

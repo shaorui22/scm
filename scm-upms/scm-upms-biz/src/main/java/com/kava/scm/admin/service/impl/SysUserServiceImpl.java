@@ -453,4 +453,14 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 		}
 	}
 
+	@Override
+	public R<String> getUserNameByWxOpenid(String wxOpenid) {
+		// 判断用户名是否存在
+		SysUser sysUser = this.getOne(Wrappers.<SysUser>lambdaQuery().eq(SysUser::getWxOpenid, wxOpenid));
+		if (sysUser == null) {
+			return R.failed("用户不存在！", wxOpenid);
+		}
+		return R.ok(sysUser.getUsername());
+	}
+
 }

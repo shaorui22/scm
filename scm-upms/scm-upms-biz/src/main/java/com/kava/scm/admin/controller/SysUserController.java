@@ -219,4 +219,11 @@ public class SysUserController {
 		return userService.checkPassword(password);
 	}
 
+
+	@Inner
+	@GetMapping("/getUserNameByWxOpenid/{wxOpenid}")
+	public R<String> getUserNameByWxOpenid(@PathVariable("wxOpenid") String wxOpenid) {
+		return userService.getUserNameByWxOpenid(wxOpenid);
+	}
+
 }
